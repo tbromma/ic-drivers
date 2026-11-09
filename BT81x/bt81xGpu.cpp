@@ -740,7 +740,7 @@ Exec BT81x_GPU::Key::Display()
     drv::bt81x::color_t keyColor;
     bool touchActive;
     uint8 touchTag;
-    uint32 currentSysTick;
+    uint64 currentSysTime;
 
     //-----------------------------------------------------------------------------------
     // Setting button color, text color & touch tag
@@ -748,11 +748,11 @@ Exec BT81x_GPU::Key::Display()
     keyColor = ctx.param.color;
     touchActive = gpu_p->ctx.touch.active;
     touchTag = gpu_p->ctx.touch.tag;
-    currentSysTick = gpu_p->ctx.config.GetSysTickMs();
+    currentSysTime = gpu_p->ctx.config.GetSysTimeMs();
 
     if (ctx.locked || !touchActive || touchTag != ctx.touchTag) {
         keyColor = ctx.param.color;
-        ctx.sysTickLast = currentSysTick;
+        ctx.sysTimeLast = currentSysTime;
         if (ctx.pressed && !touchActive) {
             ctx.event = KeyEvent::Released;
         }
@@ -760,7 +760,7 @@ Exec BT81x_GPU::Key::Display()
     }
     else {
         keyColor = ctx.param.colorOn;
-        if ((currentSysTick - ctx.sysTickLast) > ctx.param.pressedTimeMs) {
+        if ((currentSysTime - ctx.sysTimeLast) > ctx.param.pressedTimeMs) {
             if (!ctx.pressed) ctx.event = KeyEvent::Pressed;
             ctx.pressed = true;
         }

@@ -39,13 +39,13 @@ using namespace bt81x;
 
 class BT81x_GPU {
 public:
-     using SysTickMs_t = uint32 (*)();
+     using SysTimeMs_t = uint64 (*)();
 
      struct config_t {
           uint16 dlSize;                // Display list size in words (uint32)
           uint16 hSize;                 // Display horizontal size in pixel
           uint16 vSize;                 // Display vertical size in pixel
-          SysTickMs_t GetSysTickMs;     // Get system tick in ms callback
+          SysTimeMs_t GetSysTimeMs;     // Get system tick in ms callback
      };
 
      Exec    Setup(const config_t& config);
@@ -117,7 +117,7 @@ public:
                KeyEvent event = KeyEvent::None;
                bool pressed;
                bool locked = false;
-               uint32 sysTickLast;
+               uint64 sysTimeLast;
           } ctx = {};
 
           static inline BT81x_GPU* gpu_p;
