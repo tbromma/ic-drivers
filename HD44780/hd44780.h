@@ -40,7 +40,7 @@ using SysTimeUs_t = uint64 (*)();
 
 private:
 
-    static constexpr uint16 BF_MAX_CHECK_CNT = 100;
+    static constexpr uint16 BF_MAX_CHECK_CNT = 1000;
     static constexpr uint16 ROW_MAX_SIGN_CNT = 40;
 
 	// HD44780 DRIVER COMMANDS
@@ -59,14 +59,6 @@ private:
     enum OpType {
         OP_WRITE = 0,
         OP_READ = 1,
-    };
-
-    enum TrStat {
-        TR_STAT_IDLE,
-        TR_STAT_NEW,
-        TR_STAT_TX,
-        TR_STAT_WCLS,   // Wait CLS to execute
-        TR_STAT_WFBF,   // Wait for busy flag
     };
 
     void SendCommand(uint8 command);

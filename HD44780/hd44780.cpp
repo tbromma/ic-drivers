@@ -212,7 +212,7 @@ void HD44780::SendByte(RegType reg, uint8 byte)
     // Check if lcd busy flag
 
     if (GetBusyFlag()) {
-        uint8 busyCnt = BF_MAX_CHECK_CNT;
+        uint16 busyCnt = BF_MAX_CHECK_CNT;
         while (GetBusyFlag()) {
             if (!busyCnt--) {
                 REPORT_ERR("Busy flag timeout!");
