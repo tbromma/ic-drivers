@@ -10,11 +10,11 @@
 
 namespace drv {
 
-#define RS_PIN_HIGH		{ ctx.config.SetRS(1); ctx.rsLevel = 1; }
-#define RS_PIN_LOW      { ctx.config.SetRS(0); ctx.rsLevel = 0; }
+#define RS_PIN_HIGH		ctx.config.SetRS(1);
+#define RS_PIN_LOW      ctx.config.SetRS(0);
 
-#define RW_PIN_HIGH		{ ctx.config.SetRW(1); ctx.rwLevel = 1; }
-#define RW_PIN_LOW      { ctx.config.SetRW(0); ctx.rwLevel = 0; }
+#define RW_PIN_HIGH		ctx.config.SetRW(1);
+#define RW_PIN_LOW      ctx.config.SetRW(0);
 
 #define EN_PIN_HIGH		ctx.config.SetEN(1)
 #define EN_PIN_LOW      ctx.config.SetEN(0)
@@ -43,7 +43,8 @@ Exec HD44780::Setup(const config_t& config)
     ASSERT(config.SetD5 != nullptr, "Set D5 line not configured!");
     ASSERT(config.SetD6 != nullptr, "Set D6 line not configured!");
     ASSERT(config.SetD7 != nullptr, "Set D7 line not configured!");
-    ASSERT(config.SysTimeUs != nullptr, "'SysTimeUs' not configured!");
+    ASSERT(config.SetDataDir != nullptr, "'SetDataDir' not configured!");
+    ASSERT(config.DelayUs != nullptr, "'DelayUs' not configured!");
 
     ctx.config = config;
     ctx.status = Status::INIT;
@@ -59,34 +60,53 @@ Exec HD44780::Setup(const config_t& config)
     D6_PIN_LOW;
     D7_PIN_LOW;
 
+    ctx.config.SetDataDir(DIR_OUT);
+
     //-----------------------------------------------------------------------------------
-    // INITIALIZING THE HD44780 DRIVER ACCORDING TO DATASHEET PAGE 46
+    // INITIALIZING THE HD44780 DRIVER IN 8-BIT MODE
 
-    EN_PIN_HIGH;
+    // Function Set: 0x3
     D4_PIN_HIGH;
     D5_PIN_HIGH;
+    D6_PIN_LOW;
+    D7_PIN_LOW;
+
+    ctx.config.DelayUs(1);
+    EN_PIN_HIGH;
+    ctx.config.DelayUs(1);
     EN_PIN_LOW;
 
-    DelayUs(5000);
+    ctx.config.DelayUs(5000);
 
+    // Function Set: 0x3
+    ctx.config.DelayUs(1);
     EN_PIN_HIGH;
-    D4_PIN_HIGH;
-    D5_PIN_HIGH;
+    ctx.config.DelayUs(1);
     EN_PIN_LOW;
 
-    DelayUs(100);
+    ctx.config.DelayUs(200);
 
+    // Function Set: 0x3
+    ctx.config.DelayUs(1);
     EN_PIN_HIGH;
-    D4_PIN_HIGH;
-    D5_PIN_HIGH;
+    ctx.config.DelayUs(1);
     EN_PIN_LOW;
 
-    EN_PIN_HIGH;
-    D5_PIN_HIGH;
+    ctx.config.DelayUs(200);
+
+    //-----------------------------------------------------------------------------------
+    // SWITCH TO 4-BIT MODE
+
+    // Function Set: 0x2
     D4_PIN_LOW;
+    D5_PIN_HIGH;
+
+    ctx.config.DelayUs(10);
+    EN_PIN_HIGH;
+    ctx.config.DelayUs(10);
     EN_PIN_LOW;
 
-    DelayUs(1000);
+    ctx.config.DelayUs(200);
 
     //-----------------------------------------------------------------------------------
     // STANDARD SETTINGS
@@ -224,9 +244,10 @@ void HD44780::SendByte(RegType reg, uint8 byte)
     //-----------------------------------------------------------------------------------
     // Set control lines
 
+    RW_PIN_LOW;
+
     if (reg == REG_INSTR)   { RS_PIN_LOW; }
     else                    { RS_PIN_HIGH; }
-    RW_PIN_LOW;
 
     //-----------------------------------------------------------------------------------
     // WRITING THE UPPER NIBBLE
@@ -262,6 +283,8 @@ void HD44780::SendByte(RegType reg, uint8 byte)
 bool HD44780::GetBusyFlag()
 {
     bool busyFlag;
+    EN_PIN_LOW;
+    ctx.config.SetDataDir(DIR_IN);
     RS_PIN_LOW;
     RW_PIN_HIGH;
 	EN_PIN_HIGH;
@@ -269,13 +292,8 @@ bool HD44780::GetBusyFlag()
     EN_PIN_LOW;
 	EN_PIN_HIGH;
     EN_PIN_LOW;
+    ctx.config.SetDataDir(DIR_OUT);
     return busyFlag;
-}
-
-void HD44780::DelayUs(uint16 us)
-{
-    uint64 tickCntTarget = ctx.config.SysTimeUs() + us;
-    while (ctx.config.SysTimeUs() < tickCntTarget);
 }
 
 } // End of namespace 'drv'

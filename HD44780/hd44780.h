@@ -7,14 +7,21 @@ namespace drv {
 class HD44780 {
 public:
 
-enum ShiftDir {
+enum ShiftDir : uint8 {
     SHIFT_R,
     SHIFT_L,
 };
 
+enum PinDir : uint8 {
+    DIR_OUT,
+    DIR_IN,
+};
+
+
 using SetLevel_t = void (*)(bool);
 using GetLevel_t = bool (*)();
-using SysTimeUs_t = uint64 (*)();
+using SetDataDir_t = void (*)(PinDir pinDir);
+using DelayUs_t = void (*)(uint16 microsec);
 
     struct config_t {
         SetLevel_t SetEN;
@@ -25,7 +32,8 @@ using SysTimeUs_t = uint64 (*)();
         SetLevel_t SetD6;
         SetLevel_t SetD7;
         GetLevel_t GetD7;
-        SysTimeUs_t SysTimeUs;
+        SetDataDir_t SetDataDir;
+        DelayUs_t DelayUs;
     };
 
     Exec  Setup(const config_t& config);
@@ -41,22 +49,22 @@ using SysTimeUs_t = uint64 (*)();
 private:
 
     static constexpr uint16 BF_MAX_CHECK_CNT = 1000;
-    static constexpr uint16 ROW_MAX_SIGN_CNT = 40;
+    static constexpr uint8 ROW_MAX_SIGN_CNT = 40;
 
 	// HD44780 DRIVER COMMANDS
-    enum Cmd {
+    enum Cmd : uint8 {
         CMD_CURSOR_SHIFTR   = 0b00000110,
         CMD_CURSOR_SHIFTL   = 0b00000100,
         CMD_CLS             = 0b00000001,
         CMD_SET_DDRAM_ADDR  = 0b10000000,
     };
 
-    enum RegType {
+    enum RegType : uint8 {
         REG_INSTR = 0,
         REG_DATA = 1,
     };
 
-    enum OpType {
+    enum OpType : uint8 {
         OP_WRITE = 0,
         OP_READ = 1,
     };
@@ -67,16 +75,11 @@ private:
     bool GetBusyFlag();
     Exec WriteDataToFifo(RegType regType, OpType opType, uint8 dataSize, uint8* data_p);
     Exec GetFifoEntry();
-    void DelayUs(uint16);
 
     struct {
         config_t config;
         Status status;
-        State state;
         ShiftDir currentShiftDir;
-        bool rwLevel;
-        bool rsLevel;
-        bool clsCmd;
     } ctx = {};
 };
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(drvHd44780)
+project(drvHD44780)
 
 # Set C/C++ source files
 file(GLOB_RECURSE SOURCE_FILES
