@@ -52,8 +52,8 @@ Exec DS3231::Setup(const config_t& config)
     ASSERT(config.I2cTxPoll != nullptr, "I2C TX DATA FUNC.");
     ASSERT(config.I2cTxRxPoll != nullptr, "I2C TXRTX DATA FUNC.")
     ASSERT(config.I2cGetStatus != nullptr, "I2C GET CODE_STATUS FUNC.");
-    ASSERT(config.I2cGetStatus() == Status::OK, "I2C BUS INVALID CODE_STATUS");
-    ASSERT(config.label_p != nullptr, "CODE_LABEL MISSING");
+    ASSERT(config.I2cGetStatus() == Status::OK, "I2C BUS INVALID STATUS");
+    ASSERT(config.label_p != nullptr, "LABEL MISSING");
 
     ctx.config = config;
     ctx.status = Status ::INIT;
