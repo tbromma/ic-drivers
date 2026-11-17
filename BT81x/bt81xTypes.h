@@ -28,6 +28,7 @@
 ******************************************************************************************************************************************/
 
 #pragma once
+#include "common.h"
 
 /******************************************************************************************************************************************
                                                                    TYPES
@@ -298,7 +299,8 @@ struct touch_t {
 };
 
 enum widget_t : uint8 {
-    WIDGET_BUTTON,
+    WIDGET_KEY,
+    WIDGET_KEY_MATRIX,
     WIDGET_TOGGLE,
     WIDGET_SLIDER,
     WIDGET_GAUGE,
@@ -473,6 +475,8 @@ struct dlist_t {
     uint32* listEnd_p = nullptr;
     uint16 listSizeByte = 0;
     uint16 listSizeByteMax = 0;
+    uint8 usagePercent = 0;
+    uint8 usagePercentMax = 0;
     uint16 listSizeCmd = 0;
     bool listStartOk = false;
     bool listCloseOk = false;
@@ -517,52 +521,37 @@ struct text_t {
 
 // Widget button
 struct button_t {
-    int16           x;              // Position or alignment offset x axis in pixel
-    int16           y;              // Position or alignment offset y axis in pixel
-    uint16          width;          // Button width in pixel
-    uint16          height;         // Button height in pixel
-    align_t         align;          // Align option
-    gpuOpt_t        gpuOpt;         // Gpu option
-    color_t         colorOff;       // Button when not pressed
-    color_t         colorOn;        // Button color when pressed
-    const char*     text_p;         // Button text-label
-    gpuFont_t       textFont;       // Text font selection
-    color_t         textColor;      // Text color
-    uint8           touchTag = 0;   // Touch tag will be assigned automatically
-    bool            lockTouch = false;   // Lock button touch function
+    int16       x;                  // Position or alignment offset x axis in pixel
+    int16       y;                  // Position or alignment offset y axis in pixel
+    uint16      width;              // Button width in pixel
+    uint16      height;             // Button height in pixel
+    align_t     align;              // Align option
+    gpuOpt_t    gpuOpt;             // Gpu option
+    color_t     colorOff;           // Button when not pressed
+    color_t     colorOn;            // Button color when pressed
+    const char* text_p;             // Button text-label
+    gpuFont_t   textFont;           // Text font selection
+    color_t     textColor;          // Text color
+    uint8       touchTag = 0;       // Touch tag will be assigned automatically
+    bool        lockTouch = false;  // Lock button touch function
 };
 
 enum class KeyEvent {
     None,
     Pressed,
     Released,
-};
-
-// Widget key-button
-struct key_t {
-    int16           x;                  // Position or alignment offset x axis in pixel
-    int16           y;                  // Position or alignment offset y axis in pixel
-    uint16          width;              // Key width in pixel
-    uint16          height;             // Key height in pixel
-    align_t         align;              // Align option
-    gpuOpt_t        gpuOpt;             // Gpu option
-    color_t         color;              // Key color
-    color_t         colorOn;            // Key color when pressed
-    const char*     label_p;            // Key label text
-    gpuFont_t       labelFont;          // Key label text font
-    color_t         labelColor;         // Key label text color
-    uint16          pressedTimeMs = 0;  // Time in ms to get the KeyEvent::Pressed
+    Repeat,
 };
 
 // Widget rectangle
 struct rectangle_t {
-    int16           x;              // Position or alignment offset x axis in pixel
-    int16           y;              // Position or alignment offset y axis in pixel
-    uint16          width;          // Button width in pixel
-    uint16          height;         // Button height in pixel
-    uint16          cornerR;        // Corner radius in pixel
-    align_t         align;          // Align option
-    color_t         color;          // Button when not pressed
+    int16 x;            // Position or alignment offset x axis in pixel
+    int16 y;            // Position or alignment offset y axis in pixel
+    uint16 width;       // Button width in pixel
+    uint16 height;      // Button height in pixel
+    uint8 cornerR;      // Corner radius in pixel
+    align_t align;      // Align option
+    color_t color;      // Button when not pressed
 };
 
 struct arc_t {

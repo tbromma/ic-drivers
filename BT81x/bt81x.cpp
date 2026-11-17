@@ -52,7 +52,7 @@ Exec BT81x::Setup(const config_t& config)
     ASSERT(config.SpiTxClbk != nullptr, "SPI TX CLBK FUNC");
     ASSERT(config.SpiTxRxPoll != nullptr, "SPI TX/RX POLL FUNC");
     ASSERT(config.SpiTxRxClbk != nullptr, "SPI TX/RX CLBK FUNC");
-    ASSERT(config.SpiStatus != nullptr, "SPI GET CODE_STATUS FUNC");
+    ASSERT(config.SpiStatus != nullptr, "SPI GET STATUS FUNC");
     ASSERT(config.SpiStatus() == Status::OK, "SPI BUS");
     ctx.config = config;
     ctx.status = Status::OK;

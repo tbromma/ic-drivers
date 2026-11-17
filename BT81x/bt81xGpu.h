@@ -27,12 +27,19 @@
                                                                   INCLUDES
 ******************************************************************************************************************************************/
 
+#pragma once
 #include "common.h"
 #include "bt81xTypes.h"
 
 /******************************************************************************************************************************************
                                                                     API
 ******************************************************************************************************************************************/
+
+namespace drv::bt81x::widget {
+    class Key;
+    class KeyMatrix;
+}
+
 namespace drv {
 
 using namespace bt81x;
@@ -48,13 +55,15 @@ public:
           SysTimeMs_t GetSysTimeMs;     // Get system tick in ms callback
      };
 
-     Exec    Setup(const config_t& config);
-     Exec    StartNewScreen(color_t backgroundColor);
-     Exec    EndScreen();
-     void    SetTouch(const touch_t& touch);
+     Exec Setup(const config_t& config);
+     Exec StartNewScreen(color_t backgroundColor);
+     Exec EndScreen();
+     void SetTouch(const touch_t& touch);
+     touch_t GetTouch();
      dlist_t& GetDisplayList();
-     uint16  GetDisplayHeight();
-     uint16  GetDisplayWidth();
+     uint16 GetDisplayHeight();
+     uint16 GetDisplayWidth();
+     Status GetStatus();
 
      Exec    CmdClear(bool color, bool stencil, bool tag);
      Exec    CmdTouchTag(uint8& touchTag);
@@ -71,7 +80,7 @@ public:
      Exec    CmdFgColor(color_t color);
      Exec    CmdFgColorRgb(uint8 red, uint8 green, uint8 blue);
 
-     Exec    CmdText(int16 xPos, int16 yPos, gpuFont_t font, gpuOpt_t option, const char* text);
+     Exec    CmdText(int16 xPos, int16 yPos, gpuFont_t font, color_t color, gpuOpt_t option, const char* text);
      Exec    CmdText(const text_t& text);
      Exec    CmdButton(button_t& button);
      Exec    CmdToggle(toggle_t& toggle);
@@ -92,38 +101,7 @@ public:
      void      AlignWidget(widget_t type, void* widget_p, lcdPos_t& pos);
      tRelPos_t CalcTouchRelPos(const objPos_t& objPos, uint8 margin);
 
-     class Key {
-     public:
-          Key() {};
-          Key(BT81x_GPU* parent_p) { ctx.gpu_p = parent_p; }
-
-          void Setup(const key_t& key, BT81x_GPU& gpu);
-          void SetParam(const key_t& key);
-          void Update(const key_t& key);
-          Exec Display();
-          bool CheckEvent(KeyEvent event);
-          key_t GetParam();
-          uint8 GetTag();
-          void Lock();
-          void Unlock();
-
-     private:
-
-          struct {
-               key_t param;
-               Status status = Status::NONE;
-               BT81x_GPU* gpu_p;
-               uint8 touchTag = 0;
-               KeyEvent event = KeyEvent::None;
-               bool pressed;
-               bool locked = false;
-               uint64 sysTimeLast;
-          } ctx = {};
-
-          static inline BT81x_GPU* gpu_p;
-     };
-
-private:
+protected:
 
      static constexpr uint8 TOUCH_TAG_RESET_VAL = 128;
      static constexpr uint8 ALIGN_OFFSET = 1;
@@ -132,6 +110,8 @@ private:
      Exec BeginPrimitive(Primitive primitive);
      Exec Vertex2F(int16 x, int16 y);
      void AppendText(const char* text_p);
+     void CHECK_DISP_LIST_OVF(dlist_t& dlist);
+     float ArcStepDeg(float radius, float thickness);
 
      struct {
           config_t config = {};
@@ -140,6 +120,9 @@ private:
           uint8 currentTag;
           touch_t touch = {};
      } ctx = {};
+
+    friend class bt81x::widget::Key;
+    friend class bt81x::widget::KeyMatrix;
 };
 
 } // End of namespace 'bt81x'
