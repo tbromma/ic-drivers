@@ -35,8 +35,8 @@
 ******************************************************************************************************************************************/
 namespace drv::at24cxx {
 
-constexpr uint8 STD_I2C_ADDR = 0b1010000;   // Default I2C 7-bit address
-constexpr uint8 STD_PAGE_SIZE = 32;         // Default page size in byte
+constexpr uint8 DEF_I2C_ADDR = 0b1010000;   // Default I2C 7-bit address
+constexpr uint8 DEF_PAGE_SIZE = 32;         // Default page size in byte
 
 using I2cTxData_t = Exec (*)(uint8 slaveAddr, uint8* txData, uint8 txSize, bool wait, uint64* trId);
 using I2cTxRxData_t = Exec (*)(uint8 slaveAddr, uint8* txSrc, uint8 txSize, uint8* rxDest, uint8 rxSize, bool wait, uint64* trId);
@@ -59,10 +59,10 @@ struct config_t {
 class AT24Cxx {
 public:
 
-    Exec      Setup(const config_t& config);
-    Exec      ReadMemory(uint16 address, uint8* data, uint8 size, bool wait);
-    Exec      WriteByte(uint16 address, uint8 byte, bool wait);
-    Status      GetStatus();
+    Exec    Setup(const config_t& config);
+    Exec    ReadMemory(uint16 address, uint8* data, uint8 size, bool wait);
+    Exec    WriteByte(uint16 address, uint8 byte, bool wait);
+    Status  GetStatus();
 
 private:
 
