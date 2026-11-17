@@ -51,7 +51,7 @@ Exec SHT25::Setup(const config_t& config)
 {
     ASSERT(config.I2cTxPoll != nullptr, "I2C TX DATA FUNC");
     ASSERT(config.I2cRxPoll != nullptr, "I2C RX DATA FUNC");
-    ASSERT(config.I2cGetStatus != nullptr, "I2C GET CODE_STATUS FUNC");
+    ASSERT(config.I2cGetStatus != nullptr, "I2C GET STATUS FUNC");
     ASSERT(config.I2cGetStatus() == Status::OK, "I2C BUS");
 
     ctx.config = config;
