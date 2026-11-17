@@ -40,7 +40,6 @@ namespace drv {
 #define CODE_STATUS ctx.status
 
 using namespace sht4xa;
-using namespace bareOs;
 
 /******************************************************************************************************************************************
                                                          PUBLIC FUNCTION DEFINITIONS
@@ -48,11 +47,12 @@ using namespace bareOs;
 
 Exec SHT4xA::Setup(const config_t& config)
 {
-    ASSERT(ctx.status == Status::NONE, "PROBABLY EXECUTING 'SETUP' AGAIN");
-    ASSERT(config.I2cTxPoll != nullptr, "I2C TX DATA FUNC");
-    ASSERT(config.I2cRxPoll != nullptr, "I2C RX DATA FUNC");
-    ASSERT(config.I2cGetStatus != nullptr, "I2C GET CODE_STATUS FUNC");
-    ASSERT(config.I2cGetStatus() == Status::OK, "I2C BUS");
+    ASSERT(ctx.status == Status::NONE, "Probably executing 'Setup' function again!");
+    ASSERT(config.I2cTxPoll != nullptr, "'I2cTxPoll' config missing!");
+    ASSERT(config.I2cRxPoll != nullptr, "'I2cRxPoll' config missing!");
+    ASSERT(config.I2cGetStatus != nullptr, "'I2cGetStatus' config missing");
+    ASSERT(config.DelayMs != nullptr, "'DelayMs' config missing!");
+    ASSERT(config.I2cGetStatus() == Status::OK, "I2c bus invalid status!");
 
     ctx.config = config;
     ctx.status = Status ::INIT;
@@ -80,7 +80,7 @@ Exec SHT4xA::ReadSensorSn(serialNum_t& serial)
     uint8 txData = (uint8)Command::READ_SERIAL_NUMBER;
 
     CHECK_EXEC(ctx.config.I2cTxPoll(ctx.config.i2cAddr, &txData, sizeof(txData)));
-    bareOs::Timer::DelayMs(1);
+    ctx.config.DelayMs(1);
     CHECK_EXEC(ctx.config.I2cRxPoll(ctx.config.i2cAddr, (uint8*)&data, sizeof(data)));
 
     serial = (data.highWord << 16) | data.lowWord;

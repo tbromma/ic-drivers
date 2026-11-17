@@ -29,7 +29,6 @@
 
 #pragma once
 #include "common.h"
-#include "timer.h"
 #include "units.h"
 #include "utils.h"
 
@@ -81,12 +80,14 @@ public:
     using I2cTxPoll_t = Exec (*)(uint8 slaveAddr, uint8* txData, uint8 txSize);
     using I2cRxPoll_t = Exec (*)(uint8 slaveAddr, uint8* rxDest, uint8 rxSize);
     using I2cGetStatus_t = Status (*)();
+    using DelayMs_t = void (*)(uint32 milisec);
 
     struct config_t {
         uint8           i2cAddr = sht4xa::I2C_DEFAULT_ADDR;
         I2cTxPoll_t     I2cTxPoll = nullptr;
         I2cRxPoll_t     I2cRxPoll = nullptr;
         I2cGetStatus_t  I2cGetStatus = nullptr;
+        DelayMs_t       DelayMs = nullptr;
         const char*     label_p = nullptr;
     };
 
