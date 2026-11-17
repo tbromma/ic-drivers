@@ -47,16 +47,33 @@ public:
         const char*     label_p = nullptr;
     };
 
-    Exec    Setup(const config_t& config);
-    Exec    ReadRegister(husb238::RegAddr regAddr, uint8& regVal);
-    Exec    WriteRegister(husb238::RegAddr regAddr, uint8 regVal);
-    Status  GetStatus();
+    Exec Setup(const config_t& config);
+    Exec ReadRegister(husb238::RegAddr regAddr, uint8& regVal);
+    Exec WriteRegister(husb238::RegAddr regAddr, uint8 regVal);
+    Exec GetAttachedStatus(bool& attached);
+    Exec SendCommand(husb238::Command cmd);
+    Exec GetPdAvailable(husb238::PdCapability& pd);
+    Exec GetPdSelected(husb238::PdSelected& pd);
+    Exec RequestPd(husb238::PdVoltage pd);
+    Status GetStatus();
+    static const char* GetPdVoltageStr(husb238::PdVoltage voltage);
+    static const char* GetPdCurrentStr(husb238::PdCurrent current);
 
 private:
 
     struct {
         config_t config;
         Status status;
+        struct {
+            drv::husb238::RegPdStatus0 status0;
+            drv::husb238::RegPdStatus1 status1;
+            drv::husb238::RegSrcPdo5V srcPdo5V;
+            drv::husb238::RegSrcPdo9V srcPdo9V;
+            drv::husb238::RegSrcPdo12V srcPdo12V;
+            drv::husb238::RegSrcPdo15V srcPdo15V;
+            drv::husb238::RegSrcPdo18V srcPdo18V;
+            drv::husb238::RegSrcPdo20V srcPdo20V;
+        } reg;
     } ctx = {};
 };
 
