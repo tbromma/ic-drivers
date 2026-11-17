@@ -519,11 +519,20 @@ Exec BT81x_GPU::DrawRectangle(rectangle_t rectangle)
 Exec BT81x_GPU::DrawRectangle(int16 x, int16 y, uint16 width, uint16 height, uint8 radius, align_t align, color_t color, uint8 tag)
 {
     CHECK_STATUS();
+    lcdPos_t lcdPos = {};
+    rectangle_t rectangle;
+    rectangle.x = x;
+    rectangle.y = y;
+    rectangle.width = width;
+    rectangle.height = height;
+    rectangle.align = align;
+    rectangle.cornerR = radius;
+    AlignWidget(WIDGET_RECTANGLE, (void*)&rectangle, lcdPos);
     CHECK_EXEC(CmdColor(color));
     CHECK_EXEC(BeginPrimitive(Primitive::RECTANGLE));
     *ctx.dlist.listEnd_p++ = ((uint32)0x0E << 24) | ((radius ? radius : 1) * 16);
-    CHECK_EXEC(Vertex2F((int16)(x + radius) * 16, (int16)(y - radius) * 16));
-    CHECK_EXEC(Vertex2F((int16)(x + width) * 16, (int16)(y - height) * 16));
+    CHECK_EXEC(Vertex2F((int16)(lcdPos.x) * 16, (int16)(lcdPos.y) * 16));
+    CHECK_EXEC(Vertex2F((int16)((lcdPos.x + width) - 2 * radius) * 16, (int16)((lcdPos.y + height) - 2 * radius) * 16));
     if (tag) { CHECK_EXEC(CmdTouchTag(tag)); }
     CHECK_DISP_LIST_OVF(ctx.dlist);
     return Exec::OK;
