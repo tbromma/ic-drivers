@@ -32,8 +32,8 @@
 
 #undef CODE_LABEL
 #undef CODE_STATUS
-#define CODE_LABEL      ctx.config.label_p
-#define CODE_STATUS     ctx.status
+#define CODE_LABEL  ctx.config.label_p
+#define CODE_STATUS ctx.status
 
 /******************************************************************************************************************************************
                                                          PUBLIC FUNCTION DEFINITION's
@@ -47,7 +47,7 @@ Exec PCA9536::Setup(const config_t& config)
 {
     ASSERT(config.I2cTxPoll != nullptr, "I2C TX DATA FUNC");
     ASSERT(config.I2cTxRxPoll != nullptr, "I2C TXRX DATA FUNC");
-    ASSERT(config.I2cGetStatus != nullptr, "I2C GET CODE_STATUS FUNC");
+    ASSERT(config.I2cGetStatus != nullptr, "I2C GET STATUS FUNC");
     ASSERT(config.I2cGetStatus() == Status::OK, "I2C BUS");
 
     ctx.config = config;

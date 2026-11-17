@@ -35,8 +35,8 @@
 
 #undef CODE_LABEL
 #undef CODE_STATUS
-#define CODE_LABEL      ctx.config.label_p
-#define CODE_STATUS     ctx.status
+#define CODE_LABEL  ctx.config.label_p
+#define CODE_STATUS ctx.status
 
 /******************************************************************************************************************************************
                                                          PUBLIC FUNCTION DEFINITIONS
@@ -53,7 +53,7 @@ Exec RV3028::Setup(const config_t& config)
     ASSERT(config.I2cTxRxPoll != nullptr, "'I2cTxRxPoll' function not configured!")
     ASSERT(config.I2cGetStatus != nullptr, "'I2cGetStatus' function not configured!");
     ASSERT(config.I2cGetStatus() == Status::OK, "I2C bus status invalid!");
-    ASSERT(config.label_p != nullptr, "CODE_LABEL MISSING");
+    ASSERT(config.label_p != nullptr, "LABEL MISSING");
 
     ctx.config = config;
     ctx.status = Status ::INIT;
