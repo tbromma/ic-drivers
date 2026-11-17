@@ -44,11 +44,13 @@ public:
     using SpiTxPoll_t = Exec (*)(uint8* txData, uint16 txSize, bool keepSsLow);
     using SpiTxRxPoll_t = Exec (*)(uint8* txSrc, uint16 txSize, uint8* rxDest, uint16 rxSize, bool keepSsLow);
     using SpiStatus_t = Status (*)();
+    using DelayMs_t = void (*)(uint16 milisec);
 
     struct config_t {
         SpiTxPoll_t     SpiTxPoll = nullptr;
         SpiTxRxPoll_t   SpiTxRxPoll = nullptr;
         SpiStatus_t     SpiStatus = nullptr;
+        DelayMs_t       DelayMs = nullptr;
         const char*     label_p = nullptr;
     };
 

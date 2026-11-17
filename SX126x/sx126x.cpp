@@ -28,7 +28,6 @@
 ******************************************************************************************************************************************/
 
 #include "sx126x.h"
-#include "timer.h"
 #include "utils.h"
 
 /******************************************************************************************************************************************
@@ -47,10 +46,11 @@ namespace drv {
 
 Exec SX126x::Setup(const config_t& config)
 {
-    ASSERT(config.SpiTxPoll != nullptr, "SPI TX DATA FUNC");
-    ASSERT(config.SpiTxRxPoll != nullptr, "SPI TX/RX FUNC");
-    ASSERT(config.SpiStatus != nullptr, "SPI GET CODE_STATUS FUNC");
-    ASSERT(config.SpiStatus() == Status::OK, "SPI BUS");
+    ASSERT(config.SpiTxPoll != nullptr, "'SpiTxPoll' config missing");
+    ASSERT(config.SpiTxRxPoll != nullptr, "'SpiTxRxPoll' config missing");
+    ASSERT(config.SpiStatus != nullptr, "'SpiStatus' config missing");
+    ASSERT(config.DelayMs != nullptr, "'DelayMs' config missing!");
+    ASSERT(config.SpiStatus() == Status::OK, "SPI bus status invalid!");
 
     ctx.config = config;
     ctx.status = Status ::INIT;
@@ -61,7 +61,7 @@ Exec SX126x::Setup(const config_t& config)
     for (uint8 retry = 3; retry > 0; retry--) {
         CHECK_EXEC(GetRadioStatus(ctx.radioStat));
         if (ctx.radioStat.bit.chipMode == MODE_STBY_RC) break;
-        bareOs::Timer::DelayMs(10);
+        ctx.config.DelayMs(10);
     }
 
     //-----------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ Exec SX126x::WriteRegister(regAddr_t regAddr, uint8 regVal)
 Exec SX126x::SetSleep(sleepCfg_t config)
 {
     CHECK_EXEC(SendCommand(CMD_SET_SLEEP, &config.val, 1));
-    bareOs::Timer::DelayMs(1);
+    ctx.config.DelayMs(1);
     return Exec::OK;
 }
 
