@@ -47,6 +47,7 @@ public:
     using SpiCsSet_t = void (*)();
     using SpiCsClear_t = void (*)();
     using SpiStatus_t = Status (*)();
+    using SpiState_t = State (*)();
 
     struct config_t {
         SpiTxPoll_t     SpiTxPoll = nullptr;
@@ -56,6 +57,7 @@ public:
         SpiCsSet_t      SpiCsSet = nullptr;
         SpiCsClear_t    SpiCsClear = nullptr;
         SpiStatus_t     SpiStatus = nullptr;
+        SpiState_t      SpiState = nullptr;
         const char*     label_p = nullptr;
     };
 
@@ -123,7 +125,6 @@ public:
 
     Exec Setup(const config_t& config);
     Exec InitBus();
-    // Exec SendCmd(SdCmd cmd, uint32 arg, bool keepSsLow);
     Exec SendCmd(SdCmd cmd, uint32 arg, bool keepSsLow, respR1_t& resp);
     Exec SendCmd(SdCmd cmd, uint32 arg, bool keepSsLow, uint8 expResp, respR1_t& resp);
     Exec ReadResponseR1(respR1_t& resp, bool keepSsLow);

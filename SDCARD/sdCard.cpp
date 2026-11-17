@@ -58,7 +58,8 @@ Exec SDCARD::Setup(const config_t& config)
     ASSERT(ctx.config.SpiRxClbk != nullptr, "SPI RX (CLBK) DATA FUNC");
     ASSERT(ctx.config.SpiCsSet != nullptr, "SPI CS SET FUNC");
     ASSERT(ctx.config.SpiCsClear != nullptr, "SPI CS CLEAR FUNC");
-    ASSERT(ctx.config.SpiStatus != nullptr, "SPI GET CODE_STATUS FUNC");
+    ASSERT(ctx.config.SpiStatus != nullptr, "SPI GET STATUS FUNC");
+    ASSERT(ctx.config.SpiState != nullptr, "SPI GET STATE FUNC");
     ASSERT(ctx.config.SpiStatus() == Status::OK, "SPI BUS");
 
     ctx.status = Status::OK;
@@ -87,15 +88,23 @@ Exec SDCARD::SendCmd(SdCmd cmd, uint32 arg, bool keepSsLow, respR1_t& resp)
     crc = (crc << 1) | 1;
     cmd = (SdCmd)((uint8)cmd | (1 << 6));
 
+    while (ctx.config.SpiState() == State::BUSY);
     ctx.config.SpiCsSet();
     uint8 txBuff[] = {(uint8)cmd, (uint8)(arg >> 24), (uint8)(arg >> 16), (uint8)(arg >> 8), (uint8)(arg), crc,};
-    EXEC_ON_ERR(ctx.config.SpiTxPoll(txBuff, sizeof(txBuff)), ctx.config.SpiCsClear());
+    EXEC_ON_ERR(ctx.config.SpiTxPoll(txBuff, sizeof(txBuff)),
+        ctx.config.SpiCsClear();
+        return Exec::ERR;
+    );
 
     //-----------------------------------------------------------------------------------
     // Reading R1 response
 
     for (uint8 cnt = 0; cnt < R1_RETRY_CNT; cnt++) {
-        EXEC_ON_ERR(ctx.config.SpiRxPoll(&resp.val, sizeof(uint8)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll(&resp.val, sizeof(uint8)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
+
         if (resp.bit.ZERO == false) {
             if (keepSsLow == false) ctx.config.SpiCsClear();
             return Exec::OK;
@@ -121,15 +130,22 @@ Exec SDCARD::SendCmd(SdCmd cmd, uint32 arg, bool keepSsLow, uint8 expResp, respR
     crc = (crc << 1) | 1;
     cmd = (SdCmd)((uint8)cmd | (1 << 6));
 
+    while (ctx.config.SpiState() == State::BUSY);
     ctx.config.SpiCsSet();
     uint8 txBuff[] = {(uint8)cmd, (uint8)(arg >> 24), (uint8)(arg >> 16), (uint8)(arg >> 8), (uint8)(arg), crc,};
-    EXEC_ON_ERR(ctx.config.SpiTxPoll(txBuff, sizeof(txBuff)), ctx.config.SpiCsClear());
+    EXEC_ON_ERR(ctx.config.SpiTxPoll(txBuff, sizeof(txBuff)),
+        ctx.config.SpiCsClear();
+        return Exec::ERR;
+    );
 
     //-----------------------------------------------------------------------------------
     // Reading and checking R1 response
 
     for (uint8 cnt = 0; cnt < R1_RETRY_CNT; cnt++) {
-        EXEC_ON_ERR(ctx.config.SpiRxPoll(&resp.val, sizeof(uint8)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll(&resp.val, sizeof(uint8)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
         if (resp.bit.ZERO == 0) {
             if (resp.val == expResp) {
                 if (keepSsLow == false) ctx.config.SpiCsClear();
@@ -152,7 +168,10 @@ Exec SDCARD::SendCmd(SdCmd cmd, uint32 arg, bool keepSsLow, uint8 expResp, respR
 Exec SDCARD::ReadResponseR1(respR1_t& resp, bool keepSsLow)
 {
     for (uint8 cnt = 0; cnt < R1_RETRY_CNT; cnt++) {
-        EXEC_ON_ERR(ctx.config.SpiRxPoll(&resp.val, sizeof(uint8)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll(&resp.val, sizeof(uint8)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
         if (resp.bit.ZERO == false) {
             if (keepSsLow == false) ctx.config.SpiCsClear();
             return Exec::OK;
@@ -165,9 +184,15 @@ Exec SDCARD::ReadResponseR1(respR1_t& resp, bool keepSsLow)
 Exec SDCARD::ReadResponseR7(respR1_t& r1, respR7_t& r7, bool keepSsLow)
 {
     for (uint8 cnt = 0; cnt < R1_RETRY_CNT; cnt++) {
-        EXEC_ON_ERR(ctx.config.SpiRxPoll(&r1.val, sizeof(uint8)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll(&r1.val, sizeof(uint8)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
         if (r1.bit.ZERO == false) {
-            EXEC_ON_ERR(ctx.config.SpiRxPoll((uint8*)&r7.val, sizeof(uint32)), ctx.config.SpiCsClear());
+            EXEC_ON_ERR(ctx.config.SpiRxPoll((uint8*)&r7.val, sizeof(uint32)),
+                ctx.config.SpiCsClear();
+                return Exec::ERR;
+            );
             utils::RotateBytewise((uint8*)&r7.val, sizeof(uint32), (uint8*)&r7.val);
             if (keepSsLow == false) ctx.config.SpiCsClear();
             return Exec::OK;
@@ -182,7 +207,10 @@ Exec SDCARD::ReadOcrReg(respR1_t& r1, regOcr_t& ocr)
     CHECK_EXEC(SendCmd(drv::SDCARD::SdCmd::CMD58, 0, true, r1));
 
     if (r1.bit.ZERO == false) {
-        EXEC_ON_ERR(ctx.config.SpiRxPoll((uint8*)&ocr.val, sizeof(uint32)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll((uint8*)&ocr.val, sizeof(uint32)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
         utils::RotateBytewise((uint8*)&ocr.val, sizeof(uint32), (uint8*)&ocr.val);
     }
 
@@ -203,9 +231,15 @@ Exec SDCARD::ReadCsdReg(respR1_t& r1, sdCard::RegCSDv2& regCsd)
                 ctx.config.SpiCsClear();
                 return Exec::ERR;
             }
-            EXEC_ON_ERR(ctx.config.SpiRxPoll(&token, sizeof(token)), ctx.config.SpiCsClear());
+            EXEC_ON_ERR(ctx.config.SpiRxPoll(&token, sizeof(token)),
+                ctx.config.SpiCsClear();
+                return Exec::ERR;
+            );
         } while (token != TOKEN_WR_RD);
-        EXEC_ON_ERR(ctx.config.SpiRxPoll(rxData, sizeof(rxData)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll(rxData, sizeof(rxData)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
         utils::RotateBytewise(rxData, sizeof(regCsd.val), regCsd.val);
     }
 
@@ -229,9 +263,13 @@ Exec SDCARD::ReadSector(uint32 sectorNum, respR1_t& respR1, uint16& crc16, uint8
     // If card busy, wait till idle
 
     tokenRetry = TOKEN_RETRY_CNT;
+    while (ctx.config.SpiState() == State::BUSY);
     ctx.config.SpiCsSet();
     while (1) {
-        EXEC_ON_ERR(ctx.config.SpiRxPoll(&response, sizeof(response)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll(&response, sizeof(response)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
         if (response == TOKEN_CARD_IDLE) break;
         if (--tokenRetry == 0) {
             ctx.config.SpiCsClear();
@@ -248,7 +286,10 @@ Exec SDCARD::ReadSector(uint32 sectorNum, respR1_t& respR1, uint16& crc16, uint8
 
     if (respR1.val == 0x00) {
         do {
-            EXEC_ON_ERR(ctx.config.SpiRxPoll(&response, sizeof(response)), ctx.config.SpiCsClear());
+            EXEC_ON_ERR(ctx.config.SpiRxPoll(&response, sizeof(response)),
+                ctx.config.SpiCsClear();
+                return Exec::ERR;
+            );
             if (response == TOKEN_WR_RD) goto READ_BLOCK;
         } while (--tokenRetry);
     }
@@ -259,8 +300,14 @@ Exec SDCARD::ReadSector(uint32 sectorNum, respR1_t& respR1, uint16& crc16, uint8
     //-----------------------------------------------------------------------------------
 
     READ_BLOCK:
-    EXEC_ON_ERR(ctx.config.SpiRxClbk(buff_p, SECTOR_SIZE, ClbkDummy), ctx.config.SpiCsClear());
-    EXEC_ON_ERR(ctx.config.SpiRxPoll((uint8*)&crc16, CRC16_SIZE), ctx.config.SpiCsClear());
+    EXEC_ON_ERR(ctx.config.SpiRxClbk(buff_p, SECTOR_SIZE, ClbkDummy),
+        ctx.config.SpiCsClear();
+        return Exec::ERR;
+    );
+    EXEC_ON_ERR(ctx.config.SpiRxPoll((uint8*)&crc16, CRC16_SIZE),
+        ctx.config.SpiCsClear();
+        return Exec::ERR;
+    );
     ctx.config.SpiCsClear();
     return Exec::OK;
 }
@@ -275,9 +322,13 @@ Exec SDCARD::WriteSector(uint32 sectorNum, uint8* buff_p, respR1_t& respR1, Clbk
     // If card busy, wait till idle
 
     tokenRetry = TOKEN_RETRY_CNT;
+    while (ctx.config.SpiState() == State::BUSY);
     ctx.config.SpiCsSet();
     while (1) {
-        EXEC_ON_ERR(ctx.config.SpiRxPoll(&response, sizeof(response)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll(&response, sizeof(response)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
         if (response == TOKEN_CARD_IDLE) break;
         if (--tokenRetry == 0) {
             ctx.config.SpiCsClear();
@@ -290,14 +341,26 @@ Exec SDCARD::WriteSector(uint32 sectorNum, uint8* buff_p, respR1_t& respR1, Clbk
     // Write sector
 
     CHECK_EXEC(SendCmd(SdCmd::CMD24, sectorNum, true, respR1));
-    EXEC_ON_ERR(ctx.config.SpiTxClbk((uint8*)&TOKEN_WR_RD, sizeof(TOKEN_WR_RD), ClbkDummy), ctx.config.SpiCsClear());
-    EXEC_ON_ERR(ctx.config.SpiTxClbk(buff_p, SECTOR_SIZE, ClbkDummy), ctx.config.SpiCsClear());
-    EXEC_ON_ERR(ctx.config.SpiTxPoll((uint8*)&CRC16dummy, sizeof(CRC16dummy)), ctx.config.SpiCsClear());
+    EXEC_ON_ERR(ctx.config.SpiTxClbk((uint8*)&TOKEN_WR_RD, sizeof(TOKEN_WR_RD), ClbkDummy),
+        ctx.config.SpiCsClear();
+        return Exec::ERR;
+    );
+    EXEC_ON_ERR(ctx.config.SpiTxClbk(buff_p, SECTOR_SIZE, ClbkDummy),
+        ctx.config.SpiCsClear();
+        return Exec::ERR;
+    );
+    EXEC_ON_ERR(ctx.config.SpiTxPoll((uint8*)&CRC16dummy, sizeof(CRC16dummy)),
+        ctx.config.SpiCsClear();
+        return Exec::ERR;
+    );
 
     tokenRetry = TOKEN_RETRY_CNT;
 
     while (1) {
-        EXEC_ON_ERR(ctx.config.SpiRxPoll(&response, sizeof(response)), ctx.config.SpiCsClear());
+        EXEC_ON_ERR(ctx.config.SpiRxPoll(&response, sizeof(response)),
+            ctx.config.SpiCsClear();
+            return Exec::ERR;
+        );
         if ((response & TOKEN_DATA_RESP_MASK) != TOKEN_DATA_RESP) break;
         if (--tokenRetry == 0) {
             ctx.config.SpiCsClear();
