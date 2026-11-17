@@ -29,6 +29,8 @@
 
 #include "bt81xGpu.h"
 #include "utils.h"
+#include "widgetKey.h"
+#include "sincos.h"
 
 /******************************************************************************************************************************************
                                                               TYPES & DEFINES
@@ -37,22 +39,13 @@ namespace drv {
 
 #undef CODE_LABEL
 #undef CODE_STATUS
-#define CODE_LABEL      "BT81x GPU"
-#define CODE_STATUS     ctx.status
+
+#define CODE_LABEL  "BT81x GPU"
+#define CODE_STATUS ctx.status
 
 /******************************************************************************************************************************************
                                                          PUBLIC FUNCTION DEFINITIONS
 ******************************************************************************************************************************************/
-
-float ArcStepDeg(float radius, float thickness)
-{
-    return ((57.3f * 0.1f * thickness) / radius);
-}
-
-static void CHECK_DISP_LIST_OVF(dlist_t& dlist)
-{
-    ASSERT(dlist.listEnd_p <= dlist.buffEnd_p, "Display list overflow!");
-}
 
 Exec BT81x_GPU::Setup(const config_t& config)
 {
@@ -99,6 +92,11 @@ void BT81x_GPU::SetTouch(const touch_t& touch)
     ctx.touch = touch;
 }
 
+touch_t BT81x_GPU::GetTouch()
+{
+    return ctx.touch;
+}
+
 Exec BT81x_GPU::EndScreen()
 {
     CHECK_STATUS();
@@ -111,6 +109,8 @@ Exec BT81x_GPU::EndScreen()
     if (ctx.dlist.listSizeByte > ctx.dlist.listSizeByteMax) {
         ctx.dlist.listSizeByteMax = ctx.dlist.listSizeByte;
     }
+    ctx.dlist.usagePercent = (uint8)((ctx.dlist.listSizeByte * 100) / ctx.dlist.buffSizeByte);
+    ctx.dlist.usagePercentMax = (uint8)((ctx.dlist.listSizeByteMax * 100) / ctx.dlist.buffSizeByte);
     ctx.dlist.listCloseOk = true;
     return Exec::OK;
 }
@@ -130,6 +130,11 @@ uint16  BT81x_GPU::GetDisplayHeight()
 uint16  BT81x_GPU::GetDisplayWidth()
 {
     return ctx.config.hSize;
+}
+
+Status BT81x_GPU::GetStatus()
+{
+    return ctx.status;
 }
 
 Exec BT81x_GPU::CmdClear(bool color, bool stencil, bool tag)
@@ -238,10 +243,18 @@ Exec BT81x_GPU::CmdFgColorRgb(uint8 red, uint8 green, uint8 blue)
     return Exec::OK;
 }
 
-Exec BT81x_GPU::CmdText(int16 xPos, int16 yPos, gpuFont_t font, gpuOpt_t option, const char* text_p)
+Exec BT81x_GPU::CmdText(const text_t& text)
 {
     CHECK_STATUS();
-    uint8   romSlotNum = 0;
+    CHECK_EXEC(CmdText(text.xPos, text.yPos, text.font, text.color, text.option, text.text_p));
+    return Exec::OK;
+}
+
+Exec BT81x_GPU::CmdText(int16 xPos, int16 yPos, gpuFont_t font, color_t color, gpuOpt_t option, const char* text_p)
+{
+    CHECK_STATUS();
+    uint8 romSlotNum = 0;
+    CHECK_EXEC(CmdColor(color));
     *ctx.dlist.listEnd_p++ = GPU_CMD_ROMFONT;
     *ctx.dlist.listEnd_p++ = romSlotNum;
     *ctx.dlist.listEnd_p++ = font;
@@ -253,30 +266,12 @@ Exec BT81x_GPU::CmdText(int16 xPos, int16 yPos, gpuFont_t font, gpuOpt_t option,
     return Exec::OK;
 }
 
-Exec BT81x_GPU::CmdText(const text_t& text)
-{
-    CHECK_STATUS();
-    CHECK_EXEC(CmdColor(text.color));
-    uint8 romSlotNum = 0;
-    *ctx.dlist.listEnd_p++ = GPU_CMD_ROMFONT;
-    *ctx.dlist.listEnd_p++ = romSlotNum;
-    *ctx.dlist.listEnd_p++ = text.font;
-    *ctx.dlist.listEnd_p++ = GPU_CMD_TEXT;
-    *ctx.dlist.listEnd_p++ = ((uint32)text.yPos << 16) | (text.xPos & 0xFFFF);
-    *ctx.dlist.listEnd_p++ = ((uint32)text.option << 16) | (romSlotNum & 0xFFFF);
-    CHECK_DISP_LIST_OVF(ctx.dlist);
-    AppendText(text.text_p);
-    return Exec::OK;
-}
-
-     Exec    CmdText();
-
 Exec BT81x_GPU::CmdButton(button_t& button)
 {
     CHECK_STATUS();
-    ASSERT(button.text_p != nullptr, "BUTTON CODE_LABEL POINTER");
-    ASSERT(*button.text_p != 0, "BUTTON CODE_LABEL STARTS WITH NULL");
-    ASSERT((button.gpuOpt == GPU_OPT_3D) || (button.gpuOpt == GPU_OPT_FLAT), "BUTTON INVALID GPU OPTION");
+    ASSERT(button.text_p != nullptr, "Button label nullpointer!");
+    ASSERT(*button.text_p != 0, "Button label starts with '0'!");
+    ASSERT((button.gpuOpt == GPU_OPT_3D) || (button.gpuOpt == GPU_OPT_FLAT), "Invalid GPU option!");
 
     //-----------------------------------------------------------------------------------
 
@@ -298,7 +293,7 @@ Exec BT81x_GPU::CmdButton(button_t& button)
     //-----------------------------------------------------------------------------------
     // Adding button commands to display list
 
-    AlignWidget(WIDGET_BUTTON, (void*)&button, lcdPos);
+    AlignWidget(WIDGET_KEY, (void*)&button, lcdPos);
     *ctx.dlist.listEnd_p++ = GPU_CMD_ROMFONT;
     *ctx.dlist.listEnd_p++ = romSlotNum;
     *ctx.dlist.listEnd_p++ = button.textFont;
@@ -345,7 +340,7 @@ Exec BT81x_GPU::CmdKeyboard(keyboard_t& keyboard, uint8 touchTag)
 Exec BT81x_GPU::CmdToggle(toggle_t& toggle)
 {
     CHECK_STATUS();
-    ASSERT((toggle.gpuOpt == GPU_OPT_3D) || (toggle.gpuOpt == GPU_OPT_FLAT), "TOGGLE INVALID GPU OPTION");
+    ASSERT((toggle.gpuOpt == GPU_OPT_3D) || (toggle.gpuOpt == GPU_OPT_FLAT), "Invalid GPU option!");
 
     drv::bt81x::color_t barColor;
 
@@ -496,19 +491,19 @@ Exec BT81x_GPU::DrawCircle(int16 x, int16 y, uint16 radius, color_t color, uint8
 Exec BT81x_GPU::Arc(int16 x, int16 y, uint16 radius, uint8 thickness, color_t color, uint16 startDeg, uint16 endDeg)
 {
     CHECK_STATUS();
-    // CHECK_EXEC(CmdColor(color));
-    // CHECK_EXEC(BeginPrimitive(Primitive::LINE_STRIP));
-    // *ctx.dlist.listEnd_p++ = (0x0E << 24) | ((thickness * 16) / 2);
+    CHECK_EXEC(CmdColor(color));
+    CHECK_EXEC(BeginPrimitive(Primitive::LINE_STRIP));
+    *ctx.dlist.listEnd_p++ = ((uint32)0x0E << 24) | ((thickness * 16) / 2);
 
-    // uint16 spanDeg = (startDeg <= endDeg) ? endDeg - startDeg : startDeg - endDeg;
+    uint16 spanDeg = (startDeg <= endDeg) ? endDeg - startDeg : startDeg - endDeg;
 
-    // for (uint16 posDeg = 0; posDeg < spanDeg; posDeg += 2) {
-    //     int16 deg = (int16)((startDeg + posDeg));
-    //     deg %= 360;
-    //     int32 x1 = (cosTab[deg] * radius + (x * 65536)) * 16;
-    //     int32 y1 = (sinTab[deg] * radius + (y * 65536)) * 16;
-    //     CHECK_EXEC(Vertex2F((int16)(x1 / 65536), (int16)(y1 / 65536)));
-    // }
+    for (uint16 posDeg = 0; posDeg < spanDeg; posDeg += 2) {
+        int16 deg = (int16)((startDeg + posDeg));
+        deg %= 360;
+        int32 x1 = (cosTab[deg] * radius + (x * 65536)) * 16;
+        int32 y1 = (sinTab[deg] * radius + (y * 65536)) * 16;
+        CHECK_EXEC(Vertex2F((int16)(x1 / 65536), (int16)(y1 / 65536)));
+    }
 
     return Exec::OK;
 }
@@ -516,14 +511,8 @@ Exec BT81x_GPU::Arc(int16 x, int16 y, uint16 radius, uint8 thickness, color_t co
 Exec BT81x_GPU::DrawRectangle(rectangle_t rectangle)
 {
     CHECK_STATUS();
-    CHECK_EXEC(CmdColor(rectangle.color));
-    CHECK_EXEC(BeginPrimitive(Primitive::RECTANGLE));
-    *ctx.dlist.listEnd_p++ = ((uint32)0x0E << 24) | ((rectangle.cornerR ? rectangle.cornerR : 1) * 16);
-    lcdPos_t lcdPos = {};
-    AlignWidget(WIDGET_RECTANGLE, (void*)&rectangle, lcdPos);
-    CHECK_EXEC(Vertex2F((int16)(lcdPos.x) * 16, (int16)(lcdPos.y) * 16));
-    CHECK_EXEC(Vertex2F((int16)((lcdPos.x + rectangle.width) - 2 * rectangle.cornerR) * 16, (int16)((lcdPos.y + rectangle.height) - 2 * rectangle.cornerR) * 16));
-    CHECK_DISP_LIST_OVF(ctx.dlist);
+    CHECK_EXEC(DrawRectangle(rectangle.x, rectangle.y, rectangle.width, rectangle.height,
+                             rectangle.cornerR, rectangle.align, rectangle.color, 0));
     return Exec::OK;
 }
 
@@ -584,14 +573,23 @@ void BT81x_GPU::AlignWidget(widget_t type, void* widget_p, lcdPos_t& pos)
     align_t align = {};
     gpuOpt_t gpuOpt = {};
 
-    if (type == WIDGET_BUTTON) {
-        button_t* button_p = (button_t*)widget_p;
-        xPos = button_p->x;
-        yPos = button_p->y;
-        xSize = button_p->width;
-        ySize = button_p->height;
-        align = button_p->align;
-        gpuOpt = button_p->gpuOpt;
+    if (type == WIDGET_KEY) {
+        bt81x::widget::keyParam_t* key_p = (bt81x::widget::keyParam_t*)widget_p;
+        xPos = key_p->x;
+        yPos = key_p->y;
+        xSize = key_p->width;
+        ySize = key_p->height;
+        align = key_p->align;
+        gpuOpt = key_p->gpuOpt;
+    }
+    else if (type == WIDGET_KEY_MATRIX) {
+        bt81x::widget::keyMatrixParam_t* keyMatrix_p = (bt81x::widget::keyMatrixParam_t*)widget_p;
+        xPos = keyMatrix_p->x;
+        yPos = keyMatrix_p->y;
+        xSize = keyMatrix_p->width;
+        ySize = keyMatrix_p->height;
+        align = keyMatrix_p->align;
+        gpuOpt = keyMatrix_p->gpuOpt;
     }
     else if (type == WIDGET_RECTANGLE) {
         rectangle_t* rectangle_p = (rectangle_t*)widget_p;
@@ -678,13 +676,16 @@ void BT81x_GPU::CalcWidgetPos(widget_t type, void* widget_p, objPos_t& pos)
 
     AlignWidget(type, widget_p, lcdPos);
 
-    if (type == WIDGET_BUTTON) {
+    if (type == WIDGET_KEY) {
         xSize = ((button_t*)widget_p)->width;
         ySize = ((button_t*)widget_p)->height;
     }
     else if (type == WIDGET_SLIDER) {
         xSize = ((slider_t*)widget_p)->length;
         ySize = ((slider_t*)widget_p)->height;
+    }
+    else {
+        REPORT_FAT("Invalid option!");
     }
 
     pos.tl.x = lcdPos.x;
@@ -714,116 +715,15 @@ tRelPos_t BT81x_GPU::CalcTouchRelPos(const objPos_t& objPos, uint8 margin)
     return tRelPos;
 }
 
-void BT81x_GPU::Key::Setup(const key_t& param, BT81x_GPU& gpu)
+void BT81x_GPU::CHECK_DISP_LIST_OVF(dlist_t& dlist)
 {
-    SetParam(param);
-    gpu_p = &gpu;
-    ctx.status = Status::OK;
+    ASSERT(dlist.listEnd_p <= dlist.buffEnd_p, "Display list overflow!");
 }
 
-void BT81x_GPU::Key::SetParam(const key_t& param)
+float BT81x_GPU::ArcStepDeg(float radius, float thickness)
 {
-    ASSERT((param.width != 0) && (param.height != 0), "Invalid key width or height!");
-    ASSERT(strlen(param.label_p) > 0, "Key label lenght is zero!");
-    ASSERT((param.gpuOpt == GPU_OPT_3D) || (param.gpuOpt == GPU_OPT_FLAT), "Invalid GPU option!");
-    ctx.param = param;
+    return ((57.3f * 0.1f * thickness) / radius);
 }
-
-Exec BT81x_GPU::Key::Display()
-{
-    CHECK_STATUS();
-
-    //-----------------------------------------------------------------------------------
-
-    uint8 romSlotNum = 0;
-    lcdPos_t lcdPos;
-    drv::bt81x::color_t keyColor;
-    bool touchActive;
-    uint8 touchTag;
-    uint64 currentSysTime;
-
-    //-----------------------------------------------------------------------------------
-    // Setting button color, text color & touch tag
-
-    keyColor = ctx.param.color;
-    touchActive = gpu_p->ctx.touch.active;
-    touchTag = gpu_p->ctx.touch.tag;
-    currentSysTime = gpu_p->ctx.config.GetSysTimeMs();
-
-    if (ctx.locked || !touchActive || touchTag != ctx.touchTag) {
-        keyColor = ctx.param.color;
-        ctx.sysTimeLast = currentSysTime;
-        if (ctx.pressed && !touchActive) {
-            ctx.event = KeyEvent::Released;
-        }
-        ctx.pressed = false;
-    }
-    else {
-        keyColor = ctx.param.colorOn;
-        if ((currentSysTime - ctx.sysTimeLast) > ctx.param.pressedTimeMs) {
-            if (!ctx.pressed) ctx.event = KeyEvent::Pressed;
-            ctx.pressed = true;
-        }
-    }
-
-    CHECK_EXEC(gpu_p->CmdTouchTag(ctx.touchTag));
-    CHECK_EXEC(gpu_p->CmdFgColor(keyColor));
-    CHECK_EXEC(gpu_p->CmdColor(ctx.param.labelColor));
-
-    //-----------------------------------------------------------------------------------
-    // Adding key commands to display list
-
-    gpu_p->AlignWidget(WIDGET_BUTTON, (void*)&ctx.param, lcdPos);
-    *gpu_p->ctx.dlist.listEnd_p++ = GPU_CMD_ROMFONT;
-    *gpu_p->ctx.dlist.listEnd_p++ = romSlotNum;
-    *gpu_p->ctx.dlist.listEnd_p++ = ctx.param.labelFont;
-    *gpu_p->ctx.dlist.listEnd_p++ = GPU_CMD_BUTTON;
-    *gpu_p->ctx.dlist.listEnd_p++ = ((uint32)lcdPos.y << 16) | (lcdPos.x & 0xffff);
-    *gpu_p->ctx.dlist.listEnd_p++ = ((uint32)ctx.param.height << 16) | (ctx.param.width & 0xffff);
-    *gpu_p->ctx.dlist.listEnd_p++ = ((uint32)ctx.param.gpuOpt << 16) | (romSlotNum & 0xffff);
-    CHECK_DISP_LIST_OVF(gpu_p->ctx.dlist);
-    gpu_p->AppendText(ctx.param.label_p);
-    CHECK_EXEC(gpu_p->ClearTouchTag());
-
-    //-----------------------------------------------------------------------------------
-
-    return Exec::OK;
-}
-
-bool BT81x_GPU::Key::CheckEvent(KeyEvent event)
-{
-    if (ctx.event == event) {
-        ctx.event = KeyEvent::None;
-        return true;
-    }
-    return false;
-}
-
-key_t BT81x_GPU::Key::GetParam()
-{
-    return ctx.param;
-}
-
-uint8 BT81x_GPU::Key::GetTag()
-{
-    return ctx.touchTag;
-}
-
-void BT81x_GPU::Key::Lock()
-{
-    ctx.locked = true;
-    ctx.pressed = false;
-    ctx.event = KeyEvent::None;
-}
-
-void BT81x_GPU::Key::Unlock()
-{
-    ctx.locked = false;
-}
-
-/******************************************************************************************************************************************
-                                                        PRIVATE FUNCTION DECLARATIONS
-******************************************************************************************************************************************/
 
 } // END OF NAMESPACE 'drv::bt81x::gpu'
 /******************************************************************************************************************************************
