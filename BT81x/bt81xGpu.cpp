@@ -162,6 +162,15 @@ Exec BT81x_GPU::ClearTouchTag()
     return Exec::OK;
 }
 
+Exec BT81x_GPU::CmdSetRotate(RotateScreen rotate)
+{
+    CHECK_STATUS();
+    *ctx.dlist.listEnd_p++ = GPU_CMD_SETROTATE;
+    *ctx.dlist.listEnd_p++ = (uint32)rotate;
+    CHECK_DISP_LIST_OVF(ctx.dlist);
+    return Exec::OK;
+}
+
 Exec BT81x_GPU::CmdCalibTouch()
 {
     CHECK_STATUS();

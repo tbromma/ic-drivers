@@ -68,6 +68,7 @@ public:
      Exec    CmdClear(bool color, bool stencil, bool tag);
      Exec    CmdTouchTag(uint8& touchTag);
      Exec    ClearTouchTag();
+     Exec    CmdSetRotate(RotateScreen rotate);
      Exec    CmdCalibTouch();
      Exec    CmdDispLogo();
 

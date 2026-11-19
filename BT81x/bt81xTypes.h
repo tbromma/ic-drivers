@@ -330,6 +330,13 @@ enum class Primitive : uint8 {
     RECTANGLE,
 };
 
+enum class RotateScreen : uint8 {
+    _0deg = 0,
+    _90deg = 3,
+    _180deg = 1,
+    _270deg = 2,
+};
+
 constexpr uint32 GPU_CMD_DISPLAY = 0;
 constexpr uint32 GPU_CMD_APPEND = 4294967070;
 constexpr uint32 GPU_CMD_BGCOLOR = 4294967049;
